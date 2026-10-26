@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel CDC Premiação</title>
+<style>
+  :root {
+    --azul: #1f1fd6;
+    --laranja: #f39200;
+    --pendente: #fde2e2;
+    --pendente-borda: #f5b5b5;
+    --ok: #ffffff;
+    --texto: #1d1d1f;
+    --cinza: #6b7280;
+    --borda: #d9d9d9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px;
+    font-family: Calibri, "Segoe UI", Arial, sans-serif;
+    background: #f4f5f7; color: var(--texto);
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--cinza); font-size: 14px; margin-bottom: 16px; }
+  .resumo { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; font-size: 14px; }
+  .chip { padding: 4px 10px; border-radius: 999px; background: #fff; border: 1px solid var(--borda); }
+  .chip.pend { background: var(--pendente); border-color: var(--pendente-borda); }
+  table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  th, td { border: 1px solid var(--borda); padding: 6px 8px; font-size: 15px; }
+  th { color: #fff; font-weight: 600; }
+  th.gcm, th.okc { background: var(--azul); }
+  th.negc { background: var(--laranja); }
+  th.gcm { text-align: center; }
+  td.num { width: 130px; text-align: center; }
+  tr.pendente td { background: var(--pendente); }
+  input[type=number] {
+    width: 90px; padding: 5px; text-align: center; font-size: 15px;
+    border: 1px solid var(--borda); border-radius: 4px; background: #fff;
+  }
+  input[type=number]::placeholder { color: #bbb; }
+  input.vazio { border-color: #e88; }
+  input.salvando { border-color: #f0b400; }
+  input.salvo { border-color: #2e9e4f; }
+  input.erro { border-color: #d00; background: #fff0f0; }
+  tfoot td { font-weight: 700; border-top: 3px double #555; }
+  .status { margin-top: 10px; font-size: 13px; color: var(--cinza); min-height: 18px; }
+  .legenda { margin-top: 6px; font-size: 13px; color: var(--cinza); }
+  .legenda span { display: inline-block; width: 12px; height: 12px; background: var(--pendente);
+    border: 1px solid var(--pendente-borda); vertical-align: middle; margin-right: 4px; }
+  @media (max-width: 480px) {
+    td.num { width: 90px; }
+    input[type=number] { width: 64px; }
+    th, td { font-size: 13px; padding: 5px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Painel CDC Premiação</h1>
+  <div class="sub">Preencha as quantidades. Os valores são salvos automaticamente.</div>
+
+  <div class="resumo">
+    <div class="chip" id="chipOk">Preenchidos: –</div>
+    <div class="chip pend" id="chipPend">Pendentes: –</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th class="gcm">GCM</th><th class="okc">CDC Prem. OK</th><th class="negc">CDC Prem. Neg</th></tr>
+    </thead>
+    <tbody id="corpo"><tr><td colspan="3">Carregando…</td></tr></tbody>
+    <tfoot>
+      <tr><td>TOTAL</td><td class="num" id="totOk">0</td><td class="num" id="totNeg">0</td></tr>
+    </tfoot>
+  </table>
+
+  <div class="legenda"><span></span>Linha em vermelho = ainda não preenchida</div>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+  // >>> Cole aqui a URL do App da Web do Google Apps Script <<<
+  const API_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
+
+  const corpo = document.getElementById('corpo');
+  const statusEl = document.getElementById('status');
+  let dados = [];
+
+  const vazio = v => v === null || v === undefined || v === '';
+
+  function setStatus(msg) { statusEl.textContent = msg; }
+
+  function render() {
+    // não redesenha enquanto alguém está digitando
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    corpo.innerHTML = '';
+    dados.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.dataset.row = d.row;
+      tr.innerHTML = `<td>${d.nome}</td>
+        <td class="num"><input type="number" min="0" step="1" inputmode="numeric" placeholder="0" data-campo="ok"></td>
+        <td class="num"><input type="number" min="0" step="1" inputmode="numeric" placeholder="0" data-campo="neg"></td>`;
+      tr.querySelector('[data-campo=ok]').value = vazio(d.ok) ? '' : d.ok;
+      tr.querySelector('[data-campo=neg]').value = vazio(d.neg) ? '' : d.neg;
+      corpo.appendChild(tr);
+    });
+    atualizarVisual();
+  }
+
+  function atualizarVisual() {
+    let totOk = 0, totNeg = 0, pend = 0;
+    corpo.querySelectorAll('tr[data-row]').forEach(tr => {
+      const iOk = tr.querySelector('[data-campo=ok]');
+      const iNeg = tr.querySelector('[data-campo=neg]');
+      const pendente = iOk.value === '' || iNeg.value === '';
+      tr.classList.toggle('pendente', pendente);
+      iOk.classList.toggle('vazio', iOk.value === '');
+      iNeg.classList.toggle('vazio', iNeg.value === '');
+      if (pendente) pend++;
+      totOk += Number(iOk.value) || 0;
+      totNeg += Number(iNeg.value) || 0;
+    });
+    document.getElementById('totOk').textContent = totOk;
+    document.getElementById('totNeg').textContent = totNeg;
+    const total = dados.length;
+    document.getElementById('chipOk').textContent = `Preenchidos: ${total - pend} de ${total}`;
+    document.getElementById('chipPend').textContent = `Pendentes: ${pend}`;
+  }
+
+  async function carregar() {
+    try {
+      const r = await fetch(API_URL);
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error);
+      dados = j.data;
+      render();
+      setStatus('Atualizado às ' + new Date().toLocaleTimeString('pt-BR'));
+    } catch (e) {
+      setStatus('Erro ao carregar: ' + e.message);
+    }
+  }
+
+  async function salvar(input) {
+    const tr = input.closest('tr');
+    const row = Number(tr.dataset.row);
+    const campo = input.dataset.campo;
+    let valor = input.value.trim();
+    if (valor !== '') {
+      valor = Math.max(0, Math.floor(Number(valor)));
+      input.value = valor;
+    }
+    input.classList.remove('salvo', 'erro');
+    input.classList.add('salvando');
+    try {
+      // text/plain evita o preflight CORS no Apps Script
+      const r = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ row, campo, valor }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error);
+      const d = dados.find(x => x.row === row);
+      if (d) d[campo] = valor === '' ? null : valor;
+      input.classList.replace('salvando', 'salvo');
+      setStatus('Salvo às ' + new Date().toLocaleTimeString('pt-BR'));
+    } catch (e) {
+      input.classList.replace('salvando', 'erro');
+      setStatus('Erro ao salvar: ' + e.message);
+    }
+  }
+
+  corpo.addEventListener('input', atualizarVisual);
+  corpo.addEventListener('change', e => { if (e.target.matches('input')) salvar(e.target); });
+  corpo.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) e.target.blur(); });
+
+  carregar();
+  setInterval(carregar, 30000); // sincroniza com o que os colegas preencheram
+</script>
+</body>
+</html>
