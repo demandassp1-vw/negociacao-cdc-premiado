@@ -63,7 +63,7 @@
   <div class="mes">
     <label for="mesRef">Mês Referência -</label>
     <input type="text" id="mesRef" placeholder="Ex.: Outubro/2026">
-    <button type="button" id="limparMes">Limpar</button>
+    <button type="button" id="limparMes">Limpar tudo</button>
   </div>
 
   <table>
@@ -126,6 +126,7 @@
   }
 
   async function carregar() {
+    if (limpando) return; // não recarrega no meio da limpeza
     try {
       const r = await fetch(API_URL);
       const j = await r.json();
@@ -174,10 +175,26 @@
   mesRef.addEventListener('input', () => {
     try { localStorage.setItem('cdcMesRef', mesRef.value); } catch (e) {}
   });
-  document.getElementById('limparMes').addEventListener('click', () => {
+  let limpando = false;
+  const btnLimpar = document.getElementById('limparMes');
+  btnLimpar.addEventListener('click', async () => {
+    if (!confirm('Limpar o Mês Referência e TODOS os valores de CDC Prem. OK e CDC Prem. Neg?\n\nIsso apaga os dados na planilha para todos os usuários.')) return;
+    limpando = true;
+    btnLimpar.disabled = true;
     mesRef.value = '';
     try { localStorage.removeItem('cdcMesRef'); } catch (e) {}
-    mesRef.focus();
+    const inputs = [...corpo.querySelectorAll('input[data-campo]')].filter(i => i.value !== '');
+    let n = 0, erros = 0;
+    for (const input of inputs) {
+      input.value = '';
+      atualizarVisual();
+      setStatus(`Limpando… ${++n} de ${inputs.length}`);
+      await salvar(input);
+      if (input.classList.contains('erro')) erros++;
+    }
+    limpando = false;
+    btnLimpar.disabled = false;
+    setStatus(erros ? `Limpeza concluída com ${erros} erro(s). Tente novamente.` : 'Tudo limpo às ' + new Date().toLocaleTimeString('pt-BR'));
   });
 
   corpo.addEventListener('input', atualizarVisual);
