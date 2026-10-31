@@ -24,9 +24,8 @@
   .wrap { max-width: 640px; margin: 0 auto; }
   h1 { font-size: 20px; margin: 0 0 4px; }
   .sub { color: var(--cinza); font-size: 14px; margin-bottom: 16px; }
-  .resumo { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; font-size: 14px; }
-  .chip { padding: 4px 10px; border-radius: 999px; background: #fff; border: 1px solid var(--borda); }
-  .chip.pend { background: var(--pendente); border-color: var(--pendente-borda); }
+  .mes { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 14px; color: var(--cinza); }
+  .mes input { padding: 5px 8px; font-size: 14px; border: 1px solid var(--borda); border-radius: 4px; width: 160px; font-family: inherit; }
   table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   th, td { border: 1px solid var(--borda); padding: 6px 8px; font-size: 15px; }
   th { color: #fff; font-weight: 600; }
@@ -59,12 +58,9 @@
 <body>
 <div class="wrap">
   <h1>Painel CDC Premiação</h1>
-  <div class="sub">APENAS AS NEGOCIAÇÕES DE OUTUBRO/2026.</div>
-
-  <div class="resumo">
-    <div class="chip" id="chipOk">Preenchidos: –</div>
-    <div class="chip pend" id="chipPend">Pendentes: –</div>
-  </div>
+  <label class="mes">Mês Referência -
+    <input type="text" id="mesRef" placeholder="Ex.: Outubro/2026">
+  </label>
 
   <table>
     <thead>
@@ -94,7 +90,7 @@
 
   function render() {
     // não redesenha enquanto alguém está digitando
-    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    if (document.activeElement && document.activeElement.closest('#corpo')) return;
     corpo.innerHTML = '';
     dados.forEach(d => {
       const tr = document.createElement('tr');
@@ -110,7 +106,7 @@
   }
 
   function atualizarVisual() {
-    let totOk = 0, totNeg = 0, pend = 0;
+    let totOk = 0, totNeg = 0;
     corpo.querySelectorAll('tr[data-row]').forEach(tr => {
       const iOk = tr.querySelector('[data-campo=ok]');
       const iNeg = tr.querySelector('[data-campo=neg]');
@@ -118,15 +114,11 @@
       tr.classList.toggle('pendente', pendente);
       iOk.classList.toggle('vazio', iOk.value === '');
       iNeg.classList.toggle('vazio', iNeg.value === '');
-      if (pendente) pend++;
       totOk += Number(iOk.value) || 0;
       totNeg += Number(iNeg.value) || 0;
     });
     document.getElementById('totOk').textContent = totOk;
     document.getElementById('totNeg').textContent = totNeg;
-    const total = dados.length;
-    document.getElementById('chipOk').textContent = `Preenchidos: ${total - pend} de ${total}`;
-    document.getElementById('chipPend').textContent = `Pendentes: ${pend}`;
   }
 
   async function carregar() {
@@ -171,6 +163,13 @@
       setStatus('Erro ao salvar: ' + e.message);
     }
   }
+
+  // Mês Referência: fica gravado neste navegador
+  const mesRef = document.getElementById('mesRef');
+  try { mesRef.value = localStorage.getItem('cdcMesRef') || ''; } catch (e) {}
+  mesRef.addEventListener('input', () => {
+    try { localStorage.setItem('cdcMesRef', mesRef.value); } catch (e) {}
+  });
 
   corpo.addEventListener('input', atualizarVisual);
   corpo.addEventListener('change', e => { if (e.target.matches('input')) salvar(e.target); });
