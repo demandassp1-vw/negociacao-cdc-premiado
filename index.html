@@ -25,6 +25,8 @@
   h1 { font-size: 20px; margin: 0 0 4px; }
   .sub { color: var(--cinza); font-size: 14px; margin-bottom: 16px; }
   .mes { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 14px; color: var(--cinza); }
+  .mes button { padding: 5px 10px; font-size: 13px; border: 1px solid var(--borda); border-radius: 4px; background: #fff; color: var(--texto); cursor: pointer; font-family: inherit; }
+  .mes button:hover { background: #f0f0f0; }
   .mes input { padding: 5px 8px; font-size: 14px; border: 1px solid var(--borda); border-radius: 4px; width: 160px; font-family: inherit; }
   table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   th, td { border: 1px solid var(--borda); padding: 6px 8px; font-size: 15px; }
@@ -58,9 +60,11 @@
 <body>
 <div class="wrap">
   <h1>Painel CDC Premiação</h1>
-  <label class="mes">Mês Referência -
+  <div class="mes">
+    <label for="mesRef">Mês Referência -</label>
     <input type="text" id="mesRef" placeholder="Ex.: Outubro/2026">
-  </label>
+    <button type="button" id="limparMes">Limpar</button>
+  </div>
 
   <table>
     <thead>
@@ -169,6 +173,11 @@
   try { mesRef.value = localStorage.getItem('cdcMesRef') || ''; } catch (e) {}
   mesRef.addEventListener('input', () => {
     try { localStorage.setItem('cdcMesRef', mesRef.value); } catch (e) {}
+  });
+  document.getElementById('limparMes').addEventListener('click', () => {
+    mesRef.value = '';
+    try { localStorage.removeItem('cdcMesRef'); } catch (e) {}
+    mesRef.focus();
   });
 
   corpo.addEventListener('input', atualizarVisual);
